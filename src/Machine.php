@@ -5,6 +5,7 @@ namespace Sparors\Ussd;
 use Closure;
 use Exception;
 use Illuminate\Support\Facades\Cache;
+use Sparors\Ussd\Contracts\Configurator;
 
 class Machine
 {
@@ -65,8 +66,8 @@ class Machine
 
             $this->ensureClassExist(
                 $active,
-                'Active State Class needs to be set before ussd machine can'
-                . ' run. It may be that your session has ended.'
+                'Active State Class needs to be set before ussd machine can '
+                . 'run. It may be that your session has ended.'
             );
 
             $activeClass = new $active();
@@ -90,8 +91,8 @@ class Machine
             $this->processAction(
                 $stateClass,
                 $state,
-                'Initial State Class needs to be set before'
-            . ' ussd machine can run.'
+                'Initial State Class needs to be set before '
+                . 'ussd machine can run.'
             );
 
             $this->record->set('__active', $state);
@@ -99,6 +100,24 @@ class Machine
         }
 
         return ($this->response)($stateClass->render(), $stateClass->getAction());
+    }
+
+    /** @param Configurator|string $configurator */
+    public function useConfigurator($configurator): self
+    {
+        if (is_string($configurator) && class_exists($configurator)) {
+            $configurator = new $configurator();
+        }
+
+        throw_if(
+            !$configurator instanceof Configurator,
+            Exception::class,
+            "configurator does not implement Sparors\Ussd\Contracts\Configurator interface."
+        );
+
+        $configurator->configure($this);
+
+        return $this;
     }
 
     protected function saveParameter(string $key, $value)
